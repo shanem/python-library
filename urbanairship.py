@@ -11,11 +11,18 @@ except ImportError:
 SERVER = 'go.urbanairship.com'
 BASE_URL = "https://go.urbanairship.com/api"
 DEVICE_TOKEN_URL = BASE_URL + '/device_tokens/'
+APID_URL = BASE_URL + '/apids/'
 PUSH_URL = BASE_URL + '/push/'
 BATCH_PUSH_URL = BASE_URL + '/push/batch/'
 BROADCAST_URL = BASE_URL + '/push/broadcast/'
 FEEDBACK_URL = BASE_URL + '/device_tokens/feedback/'
+ANDROID_FEEDBACK_URL = BASE_URL + '/apids/feedback/'
 
+IOS = 'ios'
+ANDROID = 'android'
+
+class UnrecognizedMobilePlatformException(Exception):
+    """Raised when a bad "platform" parameter is passed"""
 
 class Unauthorized(Exception):
     """Raised when we get a 401 from the server"""
@@ -36,9 +43,15 @@ class AirshipDeviceList(object):
 
     """
 
-    def __init__(self, airship):
+    def __init__(self, airship, platform=IOS):
         self._airship = airship
-        self._load_page(DEVICE_TOKEN_URL)
+        self.platform = platform
+        if self.platform == IOS:
+            self._load_page(DEVICE_TOKEN_URL)
+        elif self.platform == ANDROID:
+            self._load_page(APID_URL)
+        else:
+            raise UnrecognizedMobilePlatformException(str(platform))
 
     def __iter__(self):
         return self
@@ -51,7 +64,12 @@ class AirshipDeviceList(object):
             return self._token_iter.next()
 
     def __len__(self):
-        return self._page['device_tokens_count']
+        if self.platform == IOS:
+            return self._page['device_tokens_count']
+        elif self.platform == ANDROID:
+            return self._page['apids_count']
+        else:
+            raise UnrecognizedMobilePlatformException(str(platform))
 
     def _fetch_next_page(self):
         next_page = self._page.get('next_page')
@@ -64,7 +82,12 @@ class AirshipDeviceList(object):
         if status != 200:
             raise AirshipFailure(status, response)
         self._page = page = json.loads(response)
-        self._token_iter = iter(page['device_tokens'])
+        if self.platform == IOS:
+            self._token_iter = iter(page['device_tokens'])
+        elif self.platform == ANDROID:
+            self._token_iter = iter(page['apids'])
+        else:
+            raise UnrecognizedMobilePlatformException(str(platform))
 
 
 class Airship(object):
@@ -89,9 +112,12 @@ class Airship(object):
 
         return resp.status, resp.read()
 
-    def register(self, device_token, alias=None, tags=None, badge=None):
+    def register(self, token, alias=None, tags=None, badge=None, platform=IOS):
         """Register the device token with UA."""
-        url = DEVICE_TOKEN_URL + device_token
+        if platform == IOS:
+            url = DEVICE_TOKEN_URL + token
+        elif platform == ANDROID:
+            url = APID_URL + token
         payload = {}
         if alias is not None:
             payload['alias'] = alias
@@ -111,9 +137,14 @@ class Airship(object):
             raise AirshipFailure(status, response)
         return status == 201
 
-    def deregister(self, device_token):
+    def deregister(self, token, platform=IOS):
         """Mark this device token as inactive"""
-        url = DEVICE_TOKEN_URL + device_token
+        if platform == IOS:
+            url = DEVICE_TOKEN_URL + token
+        elif platform == ANDROID:
+            url = APID_URL + token
+        else:
+            raise UnrecognizedMobilePlatformException(str(platform))
         status, response = self._request('DELETE', '', url, None)
         if status != 204:
             raise AirshipFailure(status, response)
@@ -128,39 +159,38 @@ class Airship(object):
             raise AirshipFailure(status, response)
         return json.loads(response)
 
-    def get_device_tokens(self):
-        return AirshipDeviceList(self)
+    def get_device_tokens(self, platform=IOS):
+        return AirshipDeviceList(self, platorm)
 
-    def push(self, payload, device_tokens=None, aliases=None, tags=None):
+    def push(self, alert, extra=None, tokens=None, aliases=None, tags=None, platform=IOS):
         """Push this payload to the specified device tokens and tags."""
-        if device_tokens:
-            payload['device_tokens'] = device_tokens
+        payload = dict()
+        if platform == ANDROID:
+            payload['android'] = dict()
+        if tokens:
+            if platform == IOS:
+                payload['device_tokens'] = tokens
+            elif platform == ANDROID:
+                payload['apids'] = tokens
+            else:
+                raise UnrecognizedMobilePlatformException(str(platform))
         if aliases:
             payload['aliases'] = aliases
         if tags:
             payload['tags'] = tags
+        if alert:
+            if platform == ANDROID:
+                payload['android']['alert'] = alert
+        if extra:
+            if platform == IOS:
+                pass #Does ios support this?
+            elif platform == ANDROID:
+                payload['android']['extra'] = extra
+            else:
+                raise UnrecognizedMobilePlatformException(str(platform))
         body = json.dumps(payload)
+        print body
         status, response = self._request('POST', body, PUSH_URL,
-            'application/json')
-        if not status == 200:
-            raise AirshipFailure(status, response)
-
-    def batch_push(self, payloads):
-        """Push the following payloads as a batch.
-
-        For payload details see:
-
-          http://urbanairship.com/docs/push.html#batch-push
-
-        Summary:
-          List of dictionaries, each with:
-            * 0 or more "device_tokens"
-            * 0 or more "aliases"
-            * "aps" payload.
-        """
-        body = json.dumps(payloads)
-
-        status, response = self._request('POST', body, BATCH_PUSH_URL,
             'application/json')
         if not status == 200:
             raise AirshipFailure(status, response)
