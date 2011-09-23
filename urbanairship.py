@@ -167,6 +167,8 @@ class Airship(object):
         payload = dict()
         if platform == ANDROID:
             payload['android'] = dict()
+        elif platform == IOS:
+            payload['aps'] = dict()
         if tokens:
             if platform == IOS:
                 payload['device_tokens'] = tokens
@@ -181,15 +183,16 @@ class Airship(object):
         if alert:
             if platform == ANDROID:
                 payload['android']['alert'] = alert
+            elif platform == IOS:
+                payload['aps']['alert'] = alert
         if extra:
             if platform == IOS:
-                pass #Does ios support this?
+                payload['d'] = extra
             elif platform == ANDROID:
                 payload['android']['extra'] = extra
             else:
                 raise UnrecognizedMobilePlatformException(str(platform))
         body = json.dumps(payload)
-        print body
         status, response = self._request('POST', body, PUSH_URL,
             'application/json')
         if not status == 200:
