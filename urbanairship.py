@@ -162,7 +162,7 @@ class Airship(object):
     def get_device_tokens(self, platform=IOS):
         return AirshipDeviceList(self, platorm)
 
-    def push(self, alert, extra=None, tokens=None, aliases=None, tags=None, platform=IOS):
+    def push(self, alert, extra=None, tokens=None, aliases=None, tags=None, platform=IOS, badge=None):
         """Push this payload to the specified device tokens and tags."""
         payload = dict()
         if platform == ANDROID:
@@ -185,6 +185,9 @@ class Airship(object):
                 payload['android']['alert'] = alert
             elif platform == IOS:
                 payload['aps']['alert'] = alert
+        if badge:
+            if platform == IOS:
+                payload['aps']['badge'] = badge
         if extra:
             if platform == IOS:
                 payload['d'] = extra
