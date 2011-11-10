@@ -162,8 +162,7 @@ class Airship(object):
     def get_device_tokens(self, platform=IOS):
         return AirshipDeviceList(self, platorm)
 
-    def push(self, alert, extra=None, tokens=None, aliases=None, tags=None, platform=IOS, badge=None):
-        """Push this payload to the specified device tokens and tags."""
+    def build_push_payload(self, alert, extra=None, tokens=None, aliases=None, tags=None, platform=IOS, badge=None):
         payload = dict()
         if platform == ANDROID:
             payload['android'] = dict()
@@ -195,9 +194,20 @@ class Airship(object):
                 payload['android']['extra'] = extra
             else:
                 raise UnrecognizedMobilePlatformException(str(platform))
+        return payload
+
+    def push(self, alert, extra=None, tokens=None, aliases=None, tags=None, platform=IOS, badge=None):
+        """Push this payload to the specified device tokens and tags."""
+        payload = self.build_push_payload(alert, extra, tokens, aliases, tags, platform, badge)
         body = json.dumps(payload)
         status, response = self._request('POST', body, PUSH_URL,
             'application/json')
+        if not status == 200:
+            raise AirshipFailure(status, response)
+
+    def push_batch(self, payloads):
+        body = json.dumps(payload)
+        status, response = self._request('POST', body, BATCH_PUSH_URL, 'application/json')
         if not status == 200:
             raise AirshipFailure(status, response)
 
