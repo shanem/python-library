@@ -206,7 +206,7 @@ class Airship(object):
             raise AirshipFailure(status, response)
 
     def push_batch(self, payloads):
-        body = json.dumps(payload)
+        body = json.dumps(payloads)
         status, response = self._request('POST', body, BATCH_PUSH_URL, 'application/json')
         if not status == 200:
             raise AirshipFailure(status, response)
