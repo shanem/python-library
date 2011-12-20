@@ -126,7 +126,7 @@ class Airship(object):
         if badge is not None:
             payload['badge'] = badge
         if payload:
-            body = json.dumps(payload)
+            body = json.dumps(payload, separators=(',',':'), ensure_ascii=False)
             content_type = 'application/json'
         else:
             body = ''
@@ -162,7 +162,7 @@ class Airship(object):
     def get_device_tokens(self, platform=IOS):
         return AirshipDeviceList(self, platorm)
 
-    def build_push_payload(self, alert, extra=None, tokens=None, aliases=None, tags=None, platform=IOS, badge=None):
+    def build_push_payload(self, alert, extra=None, tokens=None, aliases=None, tags=None, platform=IOS, badge=None, sound=None):
         payload = dict()
         if platform == ANDROID:
             payload['android'] = dict()
@@ -184,6 +184,9 @@ class Airship(object):
                 payload['android']['alert'] = alert
             elif platform == IOS:
                 payload['aps']['alert'] = alert
+        if sound:
+            if platform == IOS:
+                payload['aps']['sound'] = sound
         if badge:
             if platform == IOS:
                 payload['aps']['badge'] = badge
@@ -196,17 +199,17 @@ class Airship(object):
                 raise UnrecognizedMobilePlatformException(str(platform))
         return payload
 
-    def push(self, alert, extra=None, tokens=None, aliases=None, tags=None, platform=IOS, badge=None):
+    def push(self, alert, extra=None, tokens=None, aliases=None, tags=None, platform=IOS, badge=None, sound=None):
         """Push this payload to the specified device tokens and tags."""
-        payload = self.build_push_payload(alert, extra, tokens, aliases, tags, platform, badge)
-        body = json.dumps(payload)
+        payload = self.build_push_payload(alert, extra, tokens, aliases, tags, platform, badge, sound)
+        body = json.dumps(payload, separators=(',',':'), ensure_ascii=False)
         status, response = self._request('POST', body, PUSH_URL,
             'application/json')
         if not status == 200:
             raise AirshipFailure(status, response)
 
     def push_batch(self, payloads):
-        body = json.dumps(payloads)
+        body = json.dumps(payloads, separators=(',',':'), ensure_ascii=False)
         status, response = self._request('POST', body, BATCH_PUSH_URL, 'application/json')
         if not status == 200:
             raise AirshipFailure(status, response)
@@ -215,7 +218,7 @@ class Airship(object):
         """Broadcast this payload to all users."""
         if exclude_tokens:
             payload['exclude_tokens'] = exclude_tokens
-        body = json.dumps(payload)
+        body = json.dumps(payload, separators=(',',':'), ensure_ascii=False)
         status, response = self._request('POST', body, BROADCAST_URL,
             'application/json')
         if not status == 200:
