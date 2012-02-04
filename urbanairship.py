@@ -108,7 +108,7 @@ class Airship(object):
         h.request(method, url, body=body.encode('utf8'), headers=headers)
         resp = h.getresponse()
         if resp.status == 401:
-            raise Unauthorized
+            raise Unauthorized(resp.read())
 
         return resp.status, resp.read()
 
