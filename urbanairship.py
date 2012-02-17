@@ -105,7 +105,7 @@ class Airship(object):
         }
         if content_type:
             headers['content-type'] = content_type
-        h.request(method, url, body=body, headers=headers)
+        h.request(method, url, body=body.encode('utf8'), headers=headers)
         resp = h.getresponse()
         if resp.status == 401:
             raise Unauthorized
