@@ -152,7 +152,7 @@ class Airship(object):
     def get_device_token_info(self, device_token):
         """Retrieve information about this device token"""
         url = DEVICE_TOKEN_URL + device_token
-        status, response = self._request('GET', None, url)
+        status, response = self._request('GET', '', url)
         if status == 404:
             return None
         elif status != 200:
