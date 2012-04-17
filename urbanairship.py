@@ -69,7 +69,7 @@ class AirshipDeviceList(object):
         elif self.platform == ANDROID:
             return self._page['apids_count']
         else:
-            raise UnrecognizedMobilePlatformException(str(platform))
+            raise UnrecognizedMobilePlatformException(str(self.platform))
 
     def _fetch_next_page(self):
         next_page = self._page.get('next_page')
@@ -78,7 +78,7 @@ class AirshipDeviceList(object):
         self._load_page(next_page)
 
     def _load_page(self, url):
-        status, response = self._airship._request('GET', None, url)
+        status, response = self._airship._request('GET', '', url)
         if status != 200:
             raise AirshipFailure(status, response)
         self._page = page = json.loads(response)
@@ -87,7 +87,7 @@ class AirshipDeviceList(object):
         elif self.platform == ANDROID:
             self._token_iter = iter(page['apids'])
         else:
-            raise UnrecognizedMobilePlatformException(str(platform))
+            raise UnrecognizedMobilePlatformException(str(self.platform))
 
 
 class Airship(object):
@@ -160,7 +160,7 @@ class Airship(object):
         return json.loads(response)
 
     def get_device_tokens(self, platform=IOS):
-        return AirshipDeviceList(self, platorm)
+        return AirshipDeviceList(self, platform)
 
     def build_push_payload(self, alert, extra=None, tokens=None, aliases=None, tags=None, platform=IOS, badge=None, sound=None):
         payload = dict()
