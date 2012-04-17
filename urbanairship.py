@@ -149,9 +149,14 @@ class Airship(object):
         if status != 204:
             raise AirshipFailure(status, response)
 
-    def get_device_token_info(self, device_token):
+    def get_device_token_info(self, device_token, platform=IOS):
         """Retrieve information about this device token"""
-        url = DEVICE_TOKEN_URL + device_token
+        if platform == IOS:
+            url = DEVICE_TOKEN_URL + device_token
+        elif platform == ANDROID:
+            url = APID_URL + device_token
+        else:
+            raise UnrecognizedMobilePlatformException(str(platform))
         status, response = self._request('GET', '', url)
         if status == 404:
             return None
